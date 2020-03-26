@@ -314,6 +314,10 @@ function getFormattedDate(anydate) {
 }
 
 function getFormattedNumber(anyvalue) {
+    if (typeof anyvalue == 'number') {
+        return anyvalue
+    }
+
     if (anyvalue == null) {
         return null;
     }
@@ -576,14 +580,14 @@ const appRouter = app => {
                         nt_tests: (nt_tests) ? getFormattedNumber(nt_tests) : ((isToday) ? latestTotal_NT_Tests : feature.attributes.NT_Tests),
                         act_tests: (act_tests) ? getFormattedNumber(act_tests) : ((isToday) ? latestTotal_ACT_Tests : feature.attributes.ACT_Tests),
                         total_tests: total_tests,
-                        nsw_tests_negative: (nsw_tests_negative) ? getFormattedNumber(nsw_tests_negative) : ((isToday) ? getFormattedNumber(nsw_tests_negative_yesterday) : feature.attributes.NSW_Tests_Negative),
-                        vic_tests_negative: (vic_tests_negative) ? getFormattedNumber(vic_tests_negative) : ((isToday) ? getFormattedNumber(vic_tests_negative_yesterday) : feature.attributes.VIC_Tests_Negative),
-                        qld_tests_negative: (qld_tests_negative) ? getFormattedNumber(qld_tests_negative) : ((isToday) ? getFormattedNumber(qld_tests_negative_yesterday) : feature.attributes.QLD_Tests_Negative),
-                        sa_tests_negative: (sa_tests_negative) ? getFormattedNumber(sa_tests_negative) : ((isToday) ? getFormattedNumber(sa_tests_negative_yesterday) : feature.attributes.SA_Tests_Negative),
-                        wa_tests_negative: (wa_tests_negative) ? getFormattedNumber(wa_tests_negative) : ((isToday) ? getFormattedNumber(wa_tests_negative_yesterday) : feature.attributes.WA_Tests_Negative),
-                        tas_tests_negative: (tas_tests_negative) ? getFormattedNumber(tas_tests_negative) : ((isToday) ? getFormattedNumber(tas_tests_negative_yesterday) : feature.attributes.TAS_Tests_Negative),
-                        nt_tests_negative: (nt_tests_negative) ? getFormattedNumber(nt_tests_negative) : ((isToday) ? getFormattedNumber(nt_tests_negative_yesterday) : feature.attributes.NT_Tests_Negative),
-                        act_tests_negative: (act_tests_negative) ? getFormattedNumber(act_tests_negative) : ((isToday) ? getFormattedNumber(act_tests_negative_yesterday) : feature.attributes.ACT_Tests_Negative),
+                        nsw_tests_negative: (nsw_tests_negative) ? getFormattedNumber(nsw_tests_negative) : ((isToday) ? nsw_tests_negative_yesterday : feature.attributes.NSW_Tests_Negative),
+                        vic_tests_negative: (vic_tests_negative) ? getFormattedNumber(vic_tests_negative) : ((isToday) ? vic_tests_negative_yesterday : feature.attributes.VIC_Tests_Negative),
+                        qld_tests_negative: (qld_tests_negative) ? getFormattedNumber(qld_tests_negative) : ((isToday) ? qld_tests_negative_yesterday : feature.attributes.QLD_Tests_Negative),
+                        sa_tests_negative: (sa_tests_negative) ? getFormattedNumber(sa_tests_negative) : ((isToday) ? sa_tests_negative_yesterday : feature.attributes.SA_Tests_Negative),
+                        wa_tests_negative: (wa_tests_negative) ? getFormattedNumber(wa_tests_negative) : ((isToday) ? wa_tests_negative_yesterday : feature.attributes.WA_Tests_Negative),
+                        tas_tests_negative: (tas_tests_negative) ? getFormattedNumber(tas_tests_negative) : ((isToday) ? tas_tests_negative_yesterday : feature.attributes.TAS_Tests_Negative),
+                        nt_tests_negative: (nt_tests_negative) ? getFormattedNumber(nt_tests_negative) : ((isToday) ? nt_tests_negative_yesterday : feature.attributes.NT_Tests_Negative),
+                        act_tests_negative: (act_tests_negative) ? getFormattedNumber(act_tests_negative) : ((isToday) ? act_tests_negative_yesterday : feature.attributes.ACT_Tests_Negative),
                         total_tests_negative: total_tests_negative
                     }
                     existingFeatures.push(featureData);
@@ -779,14 +783,14 @@ const appRouter = app => {
                         nt_tests: (nt_tests) ? getFormattedNumber(nt_tests) : getFormattedNumber(latestTotal_NT_Tests),
                         act_tests: (nt_tests) ? getFormattedNumber(act_tests) : getFormattedNumber(latestTotal_ACT_Tests),
                         total_tests: total_tests,
-                        nsw_tests_negative: (nsw_tests_negative) ? getFormattedNumber(nsw_tests_negative) : getFormattedNumber(nsw_tests_negative_yesterday),
-                        vic_tests_negative: (vic_tests_negative) ? getFormattedNumber(vic_tests_negative) : getFormattedNumber(vic_tests_negative_yesterday),
-                        qld_tests_negative: (qld_tests_negative) ? getFormattedNumber(qld_tests_negative) : getFormattedNumber(qld_tests_negative_yesterday),
-                        sa_tests_negative: (sa_tests_negative) ? getFormattedNumber(sa_tests_negative) : getFormattedNumber(sa_tests_negative_yesterday),
-                        wa_tests_negative: (wa_tests_negative) ? getFormattedNumber(wa_tests_negative) : getFormattedNumber(wa_tests_negative_yesterday),
-                        tas_tests_negative: (tas_tests_negative) ? getFormattedNumber(tas_tests_negative) : getFormattedNumber(tas_tests_negative_yesterday),
-                        nt_tests_negative: (nt_tests_negative) ? getFormattedNumber(nt_tests_negative) : getFormattedNumber(nt_tests_negative_yesterday),
-                        act_tests_negative: (act_tests_negative) ? getFormattedNumber(act_tests_negative) : getFormattedNumber(act_tests_negative_yesterday),
+                        nsw_tests_negative: (nsw_tests_negative) ? getFormattedNumber(nsw_tests_negative) : nsw_tests_negative_yesterday,
+                        vic_tests_negative: (vic_tests_negative) ? getFormattedNumber(vic_tests_negative) : vic_tests_negative_yesterday,
+                        qld_tests_negative: (qld_tests_negative) ? getFormattedNumber(qld_tests_negative) : qld_tests_negative_yesterday,
+                        sa_tests_negative: (sa_tests_negative) ? getFormattedNumber(sa_tests_negative) : sa_tests_negative_yesterday,
+                        wa_tests_negative: (wa_tests_negative) ? getFormattedNumber(wa_tests_negative) : wa_tests_negative_yesterday,
+                        tas_tests_negative: (tas_tests_negative) ? getFormattedNumber(tas_tests_negative) : tas_tests_negative_yesterday,
+                        nt_tests_negative: (nt_tests_negative) ? getFormattedNumber(nt_tests_negative) : nt_tests_negative_yesterday,
+                        act_tests_negative: (act_tests_negative) ? getFormattedNumber(act_tests_negative) : act_tests_negative_yesterday,
                         total_tests_negative: total_tests_negative
                     }
                     newTimeSeries.push(featureData);
