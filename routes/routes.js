@@ -90,7 +90,7 @@ const updateTimeSeriesFeature = (updatedSites, token) =>
         const updates = updatedSites.map(data => {
             return {
                 attributes: {
-                    ObjectId: data.objectId, 
+                    ObjectId: data.objectId,
                     NSW: data.nsw_cases,
                     VIC: data.vic_cases,
                     QLD: data.qld_cases,
@@ -131,7 +131,6 @@ const updateTimeSeriesFeature = (updatedSites, token) =>
             };
         });
 
-        
         request.post(
             {
                 url: timeSeriesFeatureApiApplyEdit,
@@ -156,7 +155,7 @@ const updateTimeSeriesTotalFeature = (updatedSites, token) =>
         const updates = updatedSites.map(data => {
             return {
                 attributes: {
-                    ObjectId: data.objectId, 
+                    ObjectId: data.objectId,
                     Total_Cases: data.total_cases,
                     Total_Deaths: data.total_deaths,
                     Total_Tests: data.total_tests,
@@ -301,7 +300,7 @@ function getDayMonthYearHourMinute(monthDayYear, hourMin) {
     const year = dateString[2];
 
     if (hourMin && hourMin.length > 2) {
-        const time = hourMin.split(':');
+        const time = hourMin.includes('.') ? hourMin.split('.') : hourMin.split(':');
         const hour = time[0];
         const min = time[1];
         return new Date(year, month - 1, day, hour, min);
@@ -356,29 +355,32 @@ const dailyHistoricalUpdates = (historicalUpdates) => {
     let dailyUpdates = [];
     for (const record of historicalUpdates) {
         let datetime = getDayMonthYearHourMinute(record["Date"], record["Time"]);
-        const newRecord = {
-            State: record.State,
-            Date: getDayMonthYearHourMinute(record["Date"], '00:00'),
-            Time: record["Time"],
-            DateTimeUTC: datetime,
-            DateTimeUTCString: datetime.toUTCString(),
-            DateTimeLocaleString: datetime.toLocaleString(),
-            Cases: record["Cumulative case count"],
-            Deaths: record["Cumulative deaths"],
-            Tests: record["Tests conducted (total)"],
-            TestsNegative: record["Tests conducted (negative)"]
-        }
 
-        let similarDateRecord = dailyUpdates.find(x => x.Date.toDateString() === newRecord.Date.toDateString() && x.State === newRecord.State);
-        if (similarDateRecord != null) {
-            if (newRecord.DateTimeUTC > similarDateRecord.DateTimeUTC) {
-                let removeIndex = dailyUpdates.map(record => record.Date).indexOf(similarDateRecord.Date);
-                dailyUpdates.splice(removeIndex, 1);
-            } else {
-                continue;
+        if (!isNaN(datetime.getTime())) {
+            const newRecord = {
+                State: record.State,
+                Date: getDayMonthYearHourMinute(record["Date"], '00:00'),
+                Time: record["Time"],
+                DateTimeUTC: datetime,
+                DateTimeUTCString: datetime.toUTCString(),
+                DateTimeLocaleString: datetime.toLocaleString(),
+                Cases: record["Cumulative case count"],
+                Deaths: record["Cumulative deaths"],
+                Tests: record["Tests conducted (total)"],
+                TestsNegative: record["Tests conducted (negative)"]
             }
+
+            let similarDateRecord = dailyUpdates.find(x => x.Date.toDateString() === newRecord.Date.toDateString() && x.State === newRecord.State);
+            if (similarDateRecord != null) {
+                if (newRecord.DateTimeUTC > similarDateRecord.DateTimeUTC) {
+                    let removeIndex = dailyUpdates.map(record => record.Date).indexOf(similarDateRecord.Date);
+                    dailyUpdates.splice(removeIndex, 1);
+                } else {
+                    continue;
+                }
+            }
+            dailyUpdates.push(newRecord)
         }
-        dailyUpdates.push(newRecord)
     }
     return dailyUpdates;
 }
@@ -446,7 +448,7 @@ const appRouter = app => {
 
 
                 let isToday = false;
-                let todayDate = new Date(); 
+                let todayDate = new Date();
                 if (getFormattedDate(readableDate) === getFormattedDate(todayDate)) {
                     isToday = true;
                     latestTotal_NSW_Cases = latestTotals.find(latest => latest["State or territory"] === 'NSW')["Confirmed cases (cumulative)"];
@@ -485,13 +487,13 @@ const appRouter = app => {
                     previousUpdates = timeSeriesFeatures.features.filter(x => getFormattedDate(new Date(new Date(x.attributes.Date))) === getFormattedDate(new Date(previousDate)));
                     if (previousUpdates) {
                         nsw_tests_negative_yesterday = (!previousUpdates[0].attributes.NSW_Tests_Negative) ? null : previousUpdates[0].attributes.NSW_Tests_Negative;
-                        vic_tests_negative_yesterday =  (!previousUpdates[0].attributes.VIC_Tests_Negative) ? null :previousUpdates[0].attributes.VIC_Tests_Negative;
-                        qld_tests_negative_yesterday = (!previousUpdates[0].attributes.QLD_Tests_Negative) ? null :previousUpdates[0].attributes.QLD_Tests_Negative;
-                        sa_tests_negative_yesterday =  (!previousUpdates[0].attributes.SA_Tests_Negative) ? null :previousUpdates[0].attributes.SA_Tests_Negative;
-                        wa_tests_negative_yesterday =  (!previousUpdates[0].attributes.WA_Tests_Negative) ? null :previousUpdates[0].attributes.WA_Tests_Negative;
-                        tas_tests_negative_yesterday =  (!previousUpdates[0].attributes.TAS_Tests_Negative) ? null :previousUpdates[0].attributes.TAS_Tests_Negative;
-                        nt_tests_negative_yesterday =  (!previousUpdates[0].attributes.NT_Tests_Negative) ? null :previousUpdates[0].attributes.NT_Tests_Negative;
-                        act_tests_negative_yesterday =  (!previousUpdates[0].attributes.ACT_Tests_Negative) ? null :previousUpdates[0].attributes.ACT_Tests_Negative;   
+                        vic_tests_negative_yesterday = (!previousUpdates[0].attributes.VIC_Tests_Negative) ? null : previousUpdates[0].attributes.VIC_Tests_Negative;
+                        qld_tests_negative_yesterday = (!previousUpdates[0].attributes.QLD_Tests_Negative) ? null : previousUpdates[0].attributes.QLD_Tests_Negative;
+                        sa_tests_negative_yesterday = (!previousUpdates[0].attributes.SA_Tests_Negative) ? null : previousUpdates[0].attributes.SA_Tests_Negative;
+                        wa_tests_negative_yesterday = (!previousUpdates[0].attributes.WA_Tests_Negative) ? null : previousUpdates[0].attributes.WA_Tests_Negative;
+                        tas_tests_negative_yesterday = (!previousUpdates[0].attributes.TAS_Tests_Negative) ? null : previousUpdates[0].attributes.TAS_Tests_Negative;
+                        nt_tests_negative_yesterday = (!previousUpdates[0].attributes.NT_Tests_Negative) ? null : previousUpdates[0].attributes.NT_Tests_Negative;
+                        act_tests_negative_yesterday = (!previousUpdates[0].attributes.ACT_Tests_Negative) ? null : previousUpdates[0].attributes.ACT_Tests_Negative;
                     }
                 }
 
@@ -551,7 +553,7 @@ const appRouter = app => {
                         + parseInt(sa_tests_negative) + parseInt(wa_tests_negative) + parseInt(tas_tests_negative) + parseInt(nt_tests_negative) + parseInt(act_tests_negative);
 
                     let featureData = {
-                        objectId: feature.attributes.ObjectId,  
+                        objectId: feature.attributes.ObjectId,
                         date: readableDate.toDateString(),
                         nsw_cases: (nsw_cases) ? getFormattedNumber(nsw_cases) : ((isToday) ? latestTotal_NSW_Cases : feature.attributes.NSW),
                         vic_cases: (vic_cases) ? getFormattedNumber(vic_cases) : ((isToday) ? latestTotal_VIC_Cases : feature.attributes.VIC),
@@ -599,201 +601,203 @@ const appRouter = app => {
             console.log(uniqueDates);
 
             for (const uniqueDate of uniqueDates) {
-                let dateAdded = false;
-                for (const feature of timeSeriesFeatures.features) {
-                    if (getFormattedDate(new Date(feature.attributes.Date)) === getFormattedDate(getDayMonthYear(uniqueDate))) {
-                        dateAdded = true;
-                        todayTimestamp = 0;
-                        break;
+                if (uniqueDate) {
+                    let dateAdded = false;
+                    for (const feature of timeSeriesFeatures.features) {
+                        if (getFormattedDate(new Date(feature.attributes.Date)) === getFormattedDate(getDayMonthYear(uniqueDate))) {
+                            dateAdded = true;
+                            todayTimestamp = 0;
+                            break;
+                        }
                     }
-                }
 
-                //skip if the record is already addded
-                if (dateAdded) continue;
+                    //skip if the record is already addded
+                    if (dateAdded) continue;
 
-                let filtered = historicalUpdatesDaily.filter(x => getFormattedDate(x.DateTimeUTC) === getFormattedDate(getDayMonthYear(uniqueDate)));
+                    let filtered = historicalUpdatesDaily.filter(x => getFormattedDate(x.DateTimeUTC) === getFormattedDate(getDayMonthYear(uniqueDate)));
 
-                let latestTotal_NSW_Cases = null;
-                let latestTotal_VIC_Cases = null;
-                let latestTotal_QLD_Cases = null;
-                let latestTotal_SA_Cases = null;
-                let latestTotal_WA_Cases = null;
-                let latestTotal_TAS_Cases = null;
-                let latestTotal_NT_Cases = null;
-                let latestTotal_ACT_Cases = null;
-                let latestTotal_NSW_Tests = null;
-                let latestTotal_VIC_Tests = null;
-                let latestTotal_QLD_Tests = null;
-                let latestTotal_SA_Tests = null;
-                let latestTotal_WA_Tests = null;
-                let latestTotal_TAS_Tests = null;
-                let latestTotal_NT_Tests = null;
-                let latestTotal_ACT_Tests = null;
-                let latestTotal_NSW_Deaths = null;
-                let latestTotal_VIC_Deaths = null;
-                let latestTotal_QLD_Deaths = null;
-                let latestTotal_SA_Deaths = null;
-                let latestTotal_WA_Deaths = null;
-                let latestTotal_TAS_Deaths = null;
-                let latestTotal_NT_Deaths = null;
-                let latestTotal_ACT_Deaths = null;
-                let nsw_tests_negative_yesterday = null;
-                let vic_tests_negative_yesterday = null;
-                let qld_tests_negative_yesterday = null;
-                let sa_tests_negative_yesterday = null;
-                let wa_tests_negative_yesterday = null;
-                let tas_tests_negative_yesterday = null;
-                let nt_tests_negative_yesterday = null;
-                let act_tests_negative_yesterday = null;
+                    let latestTotal_NSW_Cases = null;
+                    let latestTotal_VIC_Cases = null;
+                    let latestTotal_QLD_Cases = null;
+                    let latestTotal_SA_Cases = null;
+                    let latestTotal_WA_Cases = null;
+                    let latestTotal_TAS_Cases = null;
+                    let latestTotal_NT_Cases = null;
+                    let latestTotal_ACT_Cases = null;
+                    let latestTotal_NSW_Tests = null;
+                    let latestTotal_VIC_Tests = null;
+                    let latestTotal_QLD_Tests = null;
+                    let latestTotal_SA_Tests = null;
+                    let latestTotal_WA_Tests = null;
+                    let latestTotal_TAS_Tests = null;
+                    let latestTotal_NT_Tests = null;
+                    let latestTotal_ACT_Tests = null;
+                    let latestTotal_NSW_Deaths = null;
+                    let latestTotal_VIC_Deaths = null;
+                    let latestTotal_QLD_Deaths = null;
+                    let latestTotal_SA_Deaths = null;
+                    let latestTotal_WA_Deaths = null;
+                    let latestTotal_TAS_Deaths = null;
+                    let latestTotal_NT_Deaths = null;
+                    let latestTotal_ACT_Deaths = null;
+                    let nsw_tests_negative_yesterday = null;
+                    let vic_tests_negative_yesterday = null;
+                    let qld_tests_negative_yesterday = null;
+                    let sa_tests_negative_yesterday = null;
+                    let wa_tests_negative_yesterday = null;
+                    let tas_tests_negative_yesterday = null;
+                    let nt_tests_negative_yesterday = null;
+                    let act_tests_negative_yesterday = null;
 
-                let isToday = false;
-                let todayDate = new Date(); 
-                console.log('Comparing date :->' + getFormattedDate(getDayMonthYear(uniqueDate)) + '===' + getFormattedDate(todayDate));
-                if (getFormattedDate(getDayMonthYear(uniqueDate)) === getFormattedDate(todayDate)) {
-                    isToday = true;
-                    console.log("[addNew] today is " + (getFormattedDate(getDayMonthYear(uniqueDate))));
-                    latestTotal_NSW_Cases = latestTotals.find(latest => latest["State or territory"] === 'NSW')["Confirmed cases (cumulative)"];
-                    latestTotal_NSW_Tests = latestTotals.find(latest => latest["State or territory"] === 'NSW')["Tests conducted"];
-                    latestTotal_NSW_Deaths = latestTotals.find(latest => latest["State or territory"] === 'NSW')["Deaths"];
+                    let isToday = false;
+                    let todayDate = new Date();
+                    console.log('Comparing date :->' + getFormattedDate(getDayMonthYear(uniqueDate)) + '===' + getFormattedDate(todayDate));
+                    if (getFormattedDate(getDayMonthYear(uniqueDate)) === getFormattedDate(todayDate)) {
+                        isToday = true;
+                        console.log("[addNew] today is " + (getFormattedDate(getDayMonthYear(uniqueDate))));
+                        latestTotal_NSW_Cases = latestTotals.find(latest => latest["State or territory"] === 'NSW')["Confirmed cases (cumulative)"];
+                        latestTotal_NSW_Tests = latestTotals.find(latest => latest["State or territory"] === 'NSW')["Tests conducted"];
+                        latestTotal_NSW_Deaths = latestTotals.find(latest => latest["State or territory"] === 'NSW')["Deaths"];
 
-                    latestTotal_VIC_Cases = latestTotals.find(latest => latest["State or territory"] === 'VIC')["Confirmed cases (cumulative)"];
-                    latestTotal_VIC_Tests = latestTotals.find(latest => latest["State or territory"] === 'VIC')["Tests conducted"];
-                    latestTotal_VIC_Deaths = latestTotals.find(latest => latest["State or territory"] === 'VIC')["Deaths"];
+                        latestTotal_VIC_Cases = latestTotals.find(latest => latest["State or territory"] === 'VIC')["Confirmed cases (cumulative)"];
+                        latestTotal_VIC_Tests = latestTotals.find(latest => latest["State or territory"] === 'VIC')["Tests conducted"];
+                        latestTotal_VIC_Deaths = latestTotals.find(latest => latest["State or territory"] === 'VIC')["Deaths"];
 
-                    latestTotal_QLD_Cases = latestTotals.find(latest => latest["State or territory"] === 'QLD')["Confirmed cases (cumulative)"];
-                    latestTotal_QLD_Tests = latestTotals.find(latest => latest["State or territory"] === 'QLD')["Tests conducted"];
-                    latestTotal_QLD_Deaths = latestTotals.find(latest => latest["State or territory"] === 'QLD')["Deaths"];
+                        latestTotal_QLD_Cases = latestTotals.find(latest => latest["State or territory"] === 'QLD')["Confirmed cases (cumulative)"];
+                        latestTotal_QLD_Tests = latestTotals.find(latest => latest["State or territory"] === 'QLD')["Tests conducted"];
+                        latestTotal_QLD_Deaths = latestTotals.find(latest => latest["State or territory"] === 'QLD')["Deaths"];
 
-                    latestTotal_SA_Cases = latestTotals.find(latest => latest["State or territory"] === 'SA')["Confirmed cases (cumulative)"];
-                    latestTotal_SA_Tests = latestTotals.find(latest => latest["State or territory"] === 'SA')["Tests conducted"];
-                    latestTotal_SA_Deaths = latestTotals.find(latest => latest["State or territory"] === 'SA')["Deaths"];
+                        latestTotal_SA_Cases = latestTotals.find(latest => latest["State or territory"] === 'SA')["Confirmed cases (cumulative)"];
+                        latestTotal_SA_Tests = latestTotals.find(latest => latest["State or territory"] === 'SA')["Tests conducted"];
+                        latestTotal_SA_Deaths = latestTotals.find(latest => latest["State or territory"] === 'SA')["Deaths"];
 
-                    latestTotal_WA_Cases = latestTotals.find(latest => latest["State or territory"] === 'WA')["Confirmed cases (cumulative)"];
-                    latestTotal_WA_Tests = latestTotals.find(latest => latest["State or territory"] === 'WA')["Tests conducted"];
-                    latestTotal_WA_Deaths = latestTotals.find(latest => latest["State or territory"] === 'WA')["Deaths"];
+                        latestTotal_WA_Cases = latestTotals.find(latest => latest["State or territory"] === 'WA')["Confirmed cases (cumulative)"];
+                        latestTotal_WA_Tests = latestTotals.find(latest => latest["State or territory"] === 'WA')["Tests conducted"];
+                        latestTotal_WA_Deaths = latestTotals.find(latest => latest["State or territory"] === 'WA')["Deaths"];
 
-                    latestTotal_TAS_Cases = latestTotals.find(latest => latest["State or territory"] === 'TAS')["Confirmed cases (cumulative)"];
-                    latestTotal_TAS_Tests = latestTotals.find(latest => latest["State or territory"] === 'TAS')["Tests conducted"];
-                    latestTotal_TAS_Deaths = latestTotals.find(latest => latest["State or territory"] === 'TAS')["Deaths"];
+                        latestTotal_TAS_Cases = latestTotals.find(latest => latest["State or territory"] === 'TAS')["Confirmed cases (cumulative)"];
+                        latestTotal_TAS_Tests = latestTotals.find(latest => latest["State or territory"] === 'TAS')["Tests conducted"];
+                        latestTotal_TAS_Deaths = latestTotals.find(latest => latest["State or territory"] === 'TAS')["Deaths"];
 
-                    latestTotal_NT_Cases = latestTotals.find(latest => latest["State or territory"] === 'NT')["Confirmed cases (cumulative)"];
-                    latestTotal_NT_Tests = latestTotals.find(latest => latest["State or territory"] === 'NT')["Tests conducted"];
-                    latestTotal_NT_Deaths = latestTotals.find(latest => latest["State or territory"] === 'NT')["Deaths"];
+                        latestTotal_NT_Cases = latestTotals.find(latest => latest["State or territory"] === 'NT')["Confirmed cases (cumulative)"];
+                        latestTotal_NT_Tests = latestTotals.find(latest => latest["State or territory"] === 'NT')["Tests conducted"];
+                        latestTotal_NT_Deaths = latestTotals.find(latest => latest["State or territory"] === 'NT')["Deaths"];
 
-                    latestTotal_ACT_Cases = latestTotals.find(latest => latest["State or territory"] === 'ACT')["Confirmed cases (cumulative)"];
-                    latestTotal_ACT_Tests = latestTotals.find(latest => latest["State or territory"] === 'ACT')["Tests conducted"];
-                    latestTotal_ACT_Deaths = latestTotals.find(latest => latest["State or territory"] === 'ACT')["Deaths"];
+                        latestTotal_ACT_Cases = latestTotals.find(latest => latest["State or territory"] === 'ACT')["Confirmed cases (cumulative)"];
+                        latestTotal_ACT_Tests = latestTotals.find(latest => latest["State or territory"] === 'ACT')["Tests conducted"];
+                        latestTotal_ACT_Deaths = latestTotals.find(latest => latest["State or territory"] === 'ACT')["Deaths"];
 
-                    let previousDate = todayDate.setDate(todayDate.getDate() - 1);
-                    previousUpdates = timeSeriesFeatures.features.filter(x => getFormattedDate(new Date(new Date(x.attributes.Date))) === getFormattedDate(new Date(previousDate)));
-                    if (previousUpdates) {
-                        nsw_tests_negative_yesterday = (!previousUpdates[0].attributes.NSW_Tests_Negative) ? null : previousUpdates[0].attributes.NSW_Tests_Negative;
-                        vic_tests_negative_yesterday =  (!previousUpdates[0].attributes.VIC_Tests_Negative) ? null :previousUpdates[0].attributes.VIC_Tests_Negative;
-                        qld_tests_negative_yesterday = (!previousUpdates[0].attributes.QLD_Tests_Negative) ? null :previousUpdates[0].attributes.QLD_Tests_Negative;
-                        sa_tests_negative_yesterday =  (!previousUpdates[0].attributes.SA_Tests_Negative) ? null :previousUpdates[0].attributes.SA_Tests_Negative;
-                        wa_tests_negative_yesterday =  (!previousUpdates[0].attributes.WA_Tests_Negative) ? null :previousUpdates[0].attributes.WA_Tests_Negative;
-                        tas_tests_negative_yesterday =  (!previousUpdates[0].attributes.TAS_Tests_Negative) ? null :previousUpdates[0].attributes.TAS_Tests_Negative;
-                        nt_tests_negative_yesterday =  (!previousUpdates[0].attributes.NT_Tests_Negative) ? null :previousUpdates[0].attributes.NT_Tests_Negative;
-                        act_tests_negative_yesterday =  (!previousUpdates[0].attributes.ACT_Tests_Negative) ? null :previousUpdates[0].attributes.ACT_Tests_Negative;   
+                        let previousDate = todayDate.setDate(todayDate.getDate() - 1);
+                        previousUpdates = timeSeriesFeatures.features.filter(x => getFormattedDate(new Date(new Date(x.attributes.Date))) === getFormattedDate(new Date(previousDate)));
+                        if (previousUpdates) {
+                            nsw_tests_negative_yesterday = (!previousUpdates[0].attributes.NSW_Tests_Negative) ? null : previousUpdates[0].attributes.NSW_Tests_Negative;
+                            vic_tests_negative_yesterday = (!previousUpdates[0].attributes.VIC_Tests_Negative) ? null : previousUpdates[0].attributes.VIC_Tests_Negative;
+                            qld_tests_negative_yesterday = (!previousUpdates[0].attributes.QLD_Tests_Negative) ? null : previousUpdates[0].attributes.QLD_Tests_Negative;
+                            sa_tests_negative_yesterday = (!previousUpdates[0].attributes.SA_Tests_Negative) ? null : previousUpdates[0].attributes.SA_Tests_Negative;
+                            wa_tests_negative_yesterday = (!previousUpdates[0].attributes.WA_Tests_Negative) ? null : previousUpdates[0].attributes.WA_Tests_Negative;
+                            tas_tests_negative_yesterday = (!previousUpdates[0].attributes.TAS_Tests_Negative) ? null : previousUpdates[0].attributes.TAS_Tests_Negative;
+                            nt_tests_negative_yesterday = (!previousUpdates[0].attributes.NT_Tests_Negative) ? null : previousUpdates[0].attributes.NT_Tests_Negative;
+                            act_tests_negative_yesterday = (!previousUpdates[0].attributes.ACT_Tests_Negative) ? null : previousUpdates[0].attributes.ACT_Tests_Negative;
+                        }
                     }
-                }
 
-                if (!dateAdded && filtered && filtered.length > 0) {
-                    let nswData = filtered.filter(x => x.State === 'NSW');
-                    let vicData = filtered.filter(x => x.State === 'VIC');
-                    let qldData = filtered.filter(x => x.State === 'QLD');
-                    let saData = filtered.filter(x => x.State === 'SA');
-                    let waData = filtered.filter(x => x.State === 'WA');
-                    let tasData = filtered.filter(x => x.State === 'TAS');
-                    let ntData = filtered.filter(x => x.State === 'NT');
-                    let actData = filtered.filter(x => x.State === 'ACT');
+                    if (!dateAdded && filtered && filtered.length > 0) {
+                        let nswData = filtered.filter(x => x.State === 'NSW');
+                        let vicData = filtered.filter(x => x.State === 'VIC');
+                        let qldData = filtered.filter(x => x.State === 'QLD');
+                        let saData = filtered.filter(x => x.State === 'SA');
+                        let waData = filtered.filter(x => x.State === 'WA');
+                        let tasData = filtered.filter(x => x.State === 'TAS');
+                        let ntData = filtered.filter(x => x.State === 'NT');
+                        let actData = filtered.filter(x => x.State === 'ACT');
 
-                    //get the latest from nswData
-                    let nsw_cases = (nswData) ? null : nswData[0].Cases;
-                    let vic_cases = (vicData == '') ? null : vicData[0].Cases;
-                    let qld_cases = (qldData == '') ? null : qldData[0].Cases;
-                    let sa_cases = (saData == '') ? null : saData[0].Cases;
-                    let wa_cases = (waData == '') ? null : waData[0].Cases;
-                    let tas_cases = (tasData == '') ? null : tasData[0].Cases;
-                    let nt_cases = (ntData == '') ? null : ntData[0].Cases;
-                    let act_cases = (actData == '') ? null : actData[0].Cases;
-                    let total_cases = parseInt(nsw_cases) + parseInt(vic_cases) + parseInt(qld_cases)
-                        + parseInt(sa_cases) + parseInt(wa_cases) + parseInt(tas_cases) + parseInt(nt_cases) + parseInt(act_cases);
+                        //get the latest from nswData
+                        let nsw_cases = (nswData) ? null : nswData[0].Cases;
+                        let vic_cases = (vicData == '') ? null : vicData[0].Cases;
+                        let qld_cases = (qldData == '') ? null : qldData[0].Cases;
+                        let sa_cases = (saData == '') ? null : saData[0].Cases;
+                        let wa_cases = (waData == '') ? null : waData[0].Cases;
+                        let tas_cases = (tasData == '') ? null : tasData[0].Cases;
+                        let nt_cases = (ntData == '') ? null : ntData[0].Cases;
+                        let act_cases = (actData == '') ? null : actData[0].Cases;
+                        let total_cases = parseInt(nsw_cases) + parseInt(vic_cases) + parseInt(qld_cases)
+                            + parseInt(sa_cases) + parseInt(wa_cases) + parseInt(tas_cases) + parseInt(nt_cases) + parseInt(act_cases);
 
-                    let nsw_deaths = (nswData == '') ? null : nswData[0].Deaths;
-                    let vic_deaths = (vicData == '') ? null : vicData[0].Deaths;
-                    let qld_deaths = (qldData == '') ? null : qldData[0].Deaths;
-                    let sa_deaths = (saData == '') ? null : saData[0].Deaths;
-                    let wa_deaths = (waData == '') ? null : waData[0].Deaths;
-                    let tas_deaths = (tasData == '') ? null : tasData[0].Deaths;
-                    let nt_deaths = (ntData == '') ? null : ntData[0].Deaths;
-                    let act_deaths = (actData == '') ? null : actData[0].Deaths;
-                    let total_deaths = parseInt(nsw_deaths) + parseInt(vic_deaths) + parseInt(qld_deaths)
-                        + parseInt(sa_deaths) + parseInt(wa_deaths) + parseInt(tas_deaths) + parseInt(nt_deaths) + parseInt(act_deaths);
+                        let nsw_deaths = (nswData == '') ? null : nswData[0].Deaths;
+                        let vic_deaths = (vicData == '') ? null : vicData[0].Deaths;
+                        let qld_deaths = (qldData == '') ? null : qldData[0].Deaths;
+                        let sa_deaths = (saData == '') ? null : saData[0].Deaths;
+                        let wa_deaths = (waData == '') ? null : waData[0].Deaths;
+                        let tas_deaths = (tasData == '') ? null : tasData[0].Deaths;
+                        let nt_deaths = (ntData == '') ? null : ntData[0].Deaths;
+                        let act_deaths = (actData == '') ? null : actData[0].Deaths;
+                        let total_deaths = parseInt(nsw_deaths) + parseInt(vic_deaths) + parseInt(qld_deaths)
+                            + parseInt(sa_deaths) + parseInt(wa_deaths) + parseInt(tas_deaths) + parseInt(nt_deaths) + parseInt(act_deaths);
 
-                    let nsw_tests = (nswData == '') ? null : nswData[0].Tests;
-                    let vic_tests = (vicData == '') ? null : vicData[0].Tests;
-                    let qld_tests = (qldData == '') ? null : qldData[0].Tests;
-                    let sa_tests = (saData == '') ? null : saData[0].Tests;
-                    let wa_tests = (waData == '') ? null : waData[0].Tests;
-                    let tas_tests = (tasData == '') ? null : tasData[0].Tests;
-                    let nt_tests = (ntData == '') ? null : ntData[0].Tests;
-                    let act_tests = (actData == '') ? null : actData[0].Tests;
-                    let total_tests = parseInt(nsw_tests) + parseInt(vic_tests) + parseInt(qld_tests)
-                        + parseInt(sa_tests) + parseInt(wa_tests) + parseInt(tas_tests) + parseInt(nt_tests) + parseInt(act_tests);
+                        let nsw_tests = (nswData == '') ? null : nswData[0].Tests;
+                        let vic_tests = (vicData == '') ? null : vicData[0].Tests;
+                        let qld_tests = (qldData == '') ? null : qldData[0].Tests;
+                        let sa_tests = (saData == '') ? null : saData[0].Tests;
+                        let wa_tests = (waData == '') ? null : waData[0].Tests;
+                        let tas_tests = (tasData == '') ? null : tasData[0].Tests;
+                        let nt_tests = (ntData == '') ? null : ntData[0].Tests;
+                        let act_tests = (actData == '') ? null : actData[0].Tests;
+                        let total_tests = parseInt(nsw_tests) + parseInt(vic_tests) + parseInt(qld_tests)
+                            + parseInt(sa_tests) + parseInt(wa_tests) + parseInt(tas_tests) + parseInt(nt_tests) + parseInt(act_tests);
 
-                    let nsw_tests_negative = (nswData == '') ? null : nswData[0].TestsNegative;
-                    let vic_tests_negative = (vicData == '') ? null : vicData[0].TestsNegative;
-                    let qld_tests_negative = (qldData == '') ? null : qldData[0].TestsNegative;
-                    let sa_tests_negative = (saData == '') ? null : saData[0].TestsNegative;
-                    let wa_tests_negative = (waData == '') ? null : waData[0].TestsNegative;
-                    let tas_tests_negative = (tasData == '') ? null : tasData[0].TestsNegative;
-                    let nt_tests_negative = (ntData == '') ? null : ntData[0].TestsNegative;
-                    let act_tests_negative = (actData == '') ? null : actData[0].TestsNegative;
-                    let total_tests_negative = parseInt(nsw_tests_negative) + parseInt(vic_tests_negative) + parseInt(qld_tests_negative)
-                        + parseInt(sa_tests_negative) + parseInt(wa_tests_negative) + parseInt(tas_tests_negative) + parseInt(nt_tests_negative) + parseInt(act_tests_negative);
+                        let nsw_tests_negative = (nswData == '') ? null : nswData[0].TestsNegative;
+                        let vic_tests_negative = (vicData == '') ? null : vicData[0].TestsNegative;
+                        let qld_tests_negative = (qldData == '') ? null : qldData[0].TestsNegative;
+                        let sa_tests_negative = (saData == '') ? null : saData[0].TestsNegative;
+                        let wa_tests_negative = (waData == '') ? null : waData[0].TestsNegative;
+                        let tas_tests_negative = (tasData == '') ? null : tasData[0].TestsNegative;
+                        let nt_tests_negative = (ntData == '') ? null : ntData[0].TestsNegative;
+                        let act_tests_negative = (actData == '') ? null : actData[0].TestsNegative;
+                        let total_tests_negative = parseInt(nsw_tests_negative) + parseInt(vic_tests_negative) + parseInt(qld_tests_negative)
+                            + parseInt(sa_tests_negative) + parseInt(wa_tests_negative) + parseInt(tas_tests_negative) + parseInt(nt_tests_negative) + parseInt(act_tests_negative);
 
-                    let featureData = {
-                        objectId: 0,
-                        date: getDayMonthYear(uniqueDate),
-                        nsw_cases: (nsw_cases) ? getFormattedNumber(nsw_cases) : getFormattedNumber(latestTotal_NSW_Cases),
-                        vic_cases: (vic_cases) ? getFormattedNumber(vic_cases) : getFormattedNumber(latestTotal_VIC_Cases),
-                        qld_cases: (qld_cases) ? getFormattedNumber(qld_cases) : getFormattedNumber(latestTotal_QLD_Cases),
-                        sa_cases: (sa_cases) ? getFormattedNumber(sa_cases) : getFormattedNumber(latestTotal_SA_Cases),
-                        wa_cases: (wa_cases) ? getFormattedNumber(sa_cases) : getFormattedNumber(latestTotal_WA_Cases),
-                        tas_cases: (tas_cases) ? getFormattedNumber(tas_cases) : getFormattedNumber(latestTotal_TAS_Cases),
-                        nt_cases: (nt_cases) ? getFormattedNumber(nt_cases) : getFormattedNumber(latestTotal_NT_Cases),
-                        act_cases: (act_cases) ? getFormattedNumber(act_cases) : getFormattedNumber(latestTotal_ACT_Cases),
-                        total_cases: total_cases,
-                        nsw_deaths: (nsw_deaths) ? getFormattedNumber(nsw_deaths) : getFormattedNumber(latestTotal_NSW_Deaths),
-                        vic_deaths: (vic_deaths) ? getFormattedNumber(vic_deaths) : getFormattedNumber(latestTotal_VIC_Deaths),
-                        qld_deaths: (qld_deaths) ? getFormattedNumber(qld_deaths) : getFormattedNumber(latestTotal_QLD_Deaths),
-                        sa_deaths: (sa_deaths) ? getFormattedNumber(sa_deaths) : getFormattedNumber(latestTotal_SA_Deaths),
-                        wa_deaths: (wa_deaths) ? getFormattedNumber(wa_deaths) : getFormattedNumber(latestTotal_WA_Deaths),
-                        tas_deaths: (tas_deaths) ? getFormattedNumber(tas_deaths) : getFormattedNumber(latestTotal_TAS_Deaths),
-                        nt_deaths: (nt_deaths) ? getFormattedNumber(nt_deaths) : getFormattedNumber(latestTotal_NT_Deaths),
-                        act_deaths: (act_deaths) ? getFormattedNumber(act_deaths) : getFormattedNumber(latestTotal_ACT_Deaths),
-                        total_deaths: total_deaths,
-                        nsw_tests: (nsw_tests) ? getFormattedNumber(nsw_tests) : getFormattedNumber(latestTotal_NSW_Tests),
-                        vic_tests: (vic_tests) ? getFormattedNumber(vic_tests) : getFormattedNumber(latestTotal_VIC_Tests),
-                        qld_tests: (qld_tests) ? getFormattedNumber(qld_tests) : getFormattedNumber(latestTotal_QLD_Tests),
-                        sa_tests: (sa_tests) ? getFormattedNumber(sa_tests) : getFormattedNumber(latestTotal_SA_Tests),
-                        wa_tests: (wa_tests) ? getFormattedNumber(wa_tests) : getFormattedNumber(latestTotal_WA_Tests),
-                        tas_tests: (wa_tests) ? getFormattedNumber(tas_tests) : getFormattedNumber(latestTotal_TAS_Tests),
-                        nt_tests: (nt_tests) ? getFormattedNumber(nt_tests) : getFormattedNumber(latestTotal_NT_Tests),
-                        act_tests: (nt_tests) ? getFormattedNumber(act_tests) : getFormattedNumber(latestTotal_ACT_Tests),
-                        total_tests: total_tests,
-                        nsw_tests_negative: (nsw_tests_negative) ? getFormattedNumber(nsw_tests_negative) : nsw_tests_negative_yesterday,
-                        vic_tests_negative: (vic_tests_negative) ? getFormattedNumber(vic_tests_negative) : vic_tests_negative_yesterday,
-                        qld_tests_negative: (qld_tests_negative) ? getFormattedNumber(qld_tests_negative) : qld_tests_negative_yesterday,
-                        sa_tests_negative: (sa_tests_negative) ? getFormattedNumber(sa_tests_negative) : sa_tests_negative_yesterday,
-                        wa_tests_negative: (wa_tests_negative) ? getFormattedNumber(wa_tests_negative) : wa_tests_negative_yesterday,
-                        tas_tests_negative: (tas_tests_negative) ? getFormattedNumber(tas_tests_negative) : tas_tests_negative_yesterday,
-                        nt_tests_negative: (nt_tests_negative) ? getFormattedNumber(nt_tests_negative) : nt_tests_negative_yesterday,
-                        act_tests_negative: (act_tests_negative) ? getFormattedNumber(act_tests_negative) : act_tests_negative_yesterday,
-                        total_tests_negative: total_tests_negative
+                        let featureData = {
+                            objectId: 0,
+                            date: getDayMonthYear(uniqueDate),
+                            nsw_cases: (nsw_cases) ? getFormattedNumber(nsw_cases) : getFormattedNumber(latestTotal_NSW_Cases),
+                            vic_cases: (vic_cases) ? getFormattedNumber(vic_cases) : getFormattedNumber(latestTotal_VIC_Cases),
+                            qld_cases: (qld_cases) ? getFormattedNumber(qld_cases) : getFormattedNumber(latestTotal_QLD_Cases),
+                            sa_cases: (sa_cases) ? getFormattedNumber(sa_cases) : getFormattedNumber(latestTotal_SA_Cases),
+                            wa_cases: (wa_cases) ? getFormattedNumber(sa_cases) : getFormattedNumber(latestTotal_WA_Cases),
+                            tas_cases: (tas_cases) ? getFormattedNumber(tas_cases) : getFormattedNumber(latestTotal_TAS_Cases),
+                            nt_cases: (nt_cases) ? getFormattedNumber(nt_cases) : getFormattedNumber(latestTotal_NT_Cases),
+                            act_cases: (act_cases) ? getFormattedNumber(act_cases) : getFormattedNumber(latestTotal_ACT_Cases),
+                            total_cases: total_cases,
+                            nsw_deaths: (nsw_deaths) ? getFormattedNumber(nsw_deaths) : getFormattedNumber(latestTotal_NSW_Deaths),
+                            vic_deaths: (vic_deaths) ? getFormattedNumber(vic_deaths) : getFormattedNumber(latestTotal_VIC_Deaths),
+                            qld_deaths: (qld_deaths) ? getFormattedNumber(qld_deaths) : getFormattedNumber(latestTotal_QLD_Deaths),
+                            sa_deaths: (sa_deaths) ? getFormattedNumber(sa_deaths) : getFormattedNumber(latestTotal_SA_Deaths),
+                            wa_deaths: (wa_deaths) ? getFormattedNumber(wa_deaths) : getFormattedNumber(latestTotal_WA_Deaths),
+                            tas_deaths: (tas_deaths) ? getFormattedNumber(tas_deaths) : getFormattedNumber(latestTotal_TAS_Deaths),
+                            nt_deaths: (nt_deaths) ? getFormattedNumber(nt_deaths) : getFormattedNumber(latestTotal_NT_Deaths),
+                            act_deaths: (act_deaths) ? getFormattedNumber(act_deaths) : getFormattedNumber(latestTotal_ACT_Deaths),
+                            total_deaths: total_deaths,
+                            nsw_tests: (nsw_tests) ? getFormattedNumber(nsw_tests) : getFormattedNumber(latestTotal_NSW_Tests),
+                            vic_tests: (vic_tests) ? getFormattedNumber(vic_tests) : getFormattedNumber(latestTotal_VIC_Tests),
+                            qld_tests: (qld_tests) ? getFormattedNumber(qld_tests) : getFormattedNumber(latestTotal_QLD_Tests),
+                            sa_tests: (sa_tests) ? getFormattedNumber(sa_tests) : getFormattedNumber(latestTotal_SA_Tests),
+                            wa_tests: (wa_tests) ? getFormattedNumber(wa_tests) : getFormattedNumber(latestTotal_WA_Tests),
+                            tas_tests: (wa_tests) ? getFormattedNumber(tas_tests) : getFormattedNumber(latestTotal_TAS_Tests),
+                            nt_tests: (nt_tests) ? getFormattedNumber(nt_tests) : getFormattedNumber(latestTotal_NT_Tests),
+                            act_tests: (nt_tests) ? getFormattedNumber(act_tests) : getFormattedNumber(latestTotal_ACT_Tests),
+                            total_tests: total_tests,
+                            nsw_tests_negative: (nsw_tests_negative) ? getFormattedNumber(nsw_tests_negative) : nsw_tests_negative_yesterday,
+                            vic_tests_negative: (vic_tests_negative) ? getFormattedNumber(vic_tests_negative) : vic_tests_negative_yesterday,
+                            qld_tests_negative: (qld_tests_negative) ? getFormattedNumber(qld_tests_negative) : qld_tests_negative_yesterday,
+                            sa_tests_negative: (sa_tests_negative) ? getFormattedNumber(sa_tests_negative) : sa_tests_negative_yesterday,
+                            wa_tests_negative: (wa_tests_negative) ? getFormattedNumber(wa_tests_negative) : wa_tests_negative_yesterday,
+                            tas_tests_negative: (tas_tests_negative) ? getFormattedNumber(tas_tests_negative) : tas_tests_negative_yesterday,
+                            nt_tests_negative: (nt_tests_negative) ? getFormattedNumber(nt_tests_negative) : nt_tests_negative_yesterday,
+                            act_tests_negative: (act_tests_negative) ? getFormattedNumber(act_tests_negative) : act_tests_negative_yesterday,
+                            total_tests_negative: total_tests_negative
+                        }
+                        newTimeSeries.push(featureData);
                     }
-                    newTimeSeries.push(featureData);
                 }
             }
 
@@ -809,7 +813,7 @@ const appRouter = app => {
             const timeSeriesFeaturesForTotal = await getTimeSeriesFeatures(token);
             let timeSeriesTotals = [];
             for (const feature of timeSeriesFeaturesForTotal.features) {
-                let objectId = feature.attributes.ObjectId; 
+                let objectId = feature.attributes.ObjectId;
                 let nsw_cases = (feature.attributes.NSW) ? feature.attributes.NSW : 0;
                 let vic_cases = (feature.attributes.VIC) ? feature.attributes.VIC : 0;
                 let qld_cases = (feature.attributes.QLD) ? feature.attributes.QLD : 0;
