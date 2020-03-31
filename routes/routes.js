@@ -1,8 +1,8 @@
 const request = require('request');
 const settings = require('../global-settings');
 
-const deletedObjectIdStarted = 656;
-const deletedObjectIdEnded = 656;
+const deletedObjectIdStarted = 99999;
+const deletedObjectIdEnded = 99999;
 
 const statesFeatureApiApplyEdit = `${settings.statesFeatureApi}/applyEdits`;
 const timeSeriesFeatureApiApplyEdit = `${settings.timeSeriesFeatureApi}/applyEdits`;
@@ -387,7 +387,7 @@ const getUpdatedValue = (feature, currentUpdatesRecord, todayRecord, classField)
     let value = null;
     if (currentUpdatesRecord[classField]) {
         value = currentUpdatesRecord[classField];
-    }else if (feature.attributes[classField] && classField.indexOf('Tests_Negative') > -1){
+    } else if (feature.attributes[classField] && classField.indexOf('Tests_Negative') > -1) {
         //for Tests_Negative, if there is value, keep the value as it is
         value = feature.attributes[classField];
     } else if (todayRecord) {
@@ -413,31 +413,28 @@ const getUpdatedValueForNewRecord = (currentUpdatesRecord, todayRecord, classFie
     return value;
 }
 
-const getPreviousDate = (todayDate) => {
-    return getGMTStartDatetime(getFormattedDate(new Date(todayDate.setDate(todayDate.getDate() - 1))));
-}
-
 const getTodayRecord = (latestTotals, timeSeriesFeatures) => {
-    
-    let previousDate = getFormattedDate(new Date(new Date().setDate(new Date().getDate() - 1)));   
-    let previousTimestamp = new Date(previousDate + ' 00:00 GMT').setHours(new Date(previousDate + ' 00:00 GMT').getHours() - settings.additionalHours);
-    //let previousTimestamp = new Date(previousDate + ' 00:00 GMT').getTime()
-    let previousUpdates = timeSeriesFeatures.features.filter(x => x.attributes.Date === previousTimestamp);
+    let yesterdayTimestamp = getYesterdayTimestamp();
+    let yesterdayUpdates = timeSeriesFeatures.features.filter(x => x.attributes.Date === yesterdayTimestamp);
     let todayRecord = {};
-
     for (const state of _states) {
         for (const field of _layerFields) {
             let fieldName = state + '_' + field;
             let previousExistingRecord = 0;
             let latestTotalsRecord = latestTotals.find(latest => latest["State or territory"] === state)[_jsonFields_LatestTotals[field]];
-            if (previousUpdates) {
+            if (yesterdayUpdates) {
                 if (field === 'Cases') {
-                    previousExistingRecord = (!previousUpdates[0].attributes[fieldName]) ? null : previousUpdates[0].attributes[state];
+                    previousExistingRecord = (!yesterdayUpdates[0].attributes[fieldName]) ? null : yesterdayUpdates[0].attributes[state];
                 } else {
-                    previousExistingRecord = (!previousUpdates[0].attributes[fieldName]) ? null : previousUpdates[0].attributes[fieldName];
+                    previousExistingRecord = (!yesterdayUpdates[0].attributes[fieldName]) ? null : yesterdayUpdates[0].attributes[fieldName];
                 }
             }
-            todayRecord[fieldName] = (latestTotalsRecord) ? latestTotalsRecord : previousExistingRecord;
+
+            if (latestTotalsRecord) {
+                todayRecord[fieldName] = latestTotalsRecord;
+            } else {
+                todayRecord[fieldName] = previousExistingRecord
+            }
         }
     }
 
@@ -452,15 +449,14 @@ const getUpdatedTimeSeries = (timeSeriesFeatures, historicalUpdatesDaily, latest
         let currentUpdatesRecord = {};
         let updatedRecord = {};
         let todayRecord = null;
-        let todayDate = getFormattedDate(new Date());
-        let todayTimestamp = new Date(todayDate + ' 00:00 GMT').setHours(new Date(todayDate + ' 00:00 GMT').getHours() - settings.additionalHours);
+        let todayTimestamp = getTodayTimestamp(); 
 
         //filter by timestamp
         let filtered = historicalUpdatesDaily.filter(x => x.DateTimestamp === feature.attributes.Date);
 
         if (feature.attributes.Date === todayTimestamp) {
             todayRecord = getTodayRecord(latestTotals, timeSeriesFeatures);
-            console.log('updating record for today:' + todayTimestamp);
+            console.log('[getUpdatedTimeSeries] todayRecord:' + todayRecord);
         }
 
         if (filtered != null && filtered.length > 0) {
@@ -491,13 +487,13 @@ const getUpdatedTimeSeries = (timeSeriesFeatures, historicalUpdatesDaily, latest
                     if (field != 'Cases' && field != 'Deaths' && field != 'Tests') {
                         if (feature.attributes[classField]) {
                             updatedRecord[classField] = feature.attributes[classField];
-                        } else{
+                        } else {
                             updatedRecord[classField] = todayRecord[classField];
                         }
                     } else {
                         updatedRecord[classField] = todayRecord[classField];
                     }
-                    
+
                 }
             }
         }
@@ -520,10 +516,43 @@ const IsAlreadyAdded = (uniqueDateTimestamp, timeSeriesFeatures) => {
     return false;
 }
 
+const getYesterdayTimestamp = () => {
+    let newTodayDate = getTodayDateString();
+    let todayDate = getFormattedDate(getDayMonthYear(newTodayDate)) + ' 00:00 GMT';
+    let yesterdayTimestamp = new Date(todayDate).setDate(new Date(todayDate).getDate() - 1);
+    return yesterdayTimestamp;
+}
+
+const getTodayTimestamp = () => {
+    let newTodayDate = getTodayDateString();
+    let todayDate = getFormattedDate(getDayMonthYear(newTodayDate)) + ' 00:00 GMT';//getFormattedDate(new Date()) + ' 00:00 GMT';
+    let todayTimestamp = new Date(todayDate).setHours(new Date(todayDate).getHours() - settings.additionalHours);
+    return todayTimestamp;
+}
+
+const getTodayDateString = () => {
+    let newTodayDateTime = getTodayDateTime();
+    let newTodayDate = getCustomFormattedDate(newTodayDateTime, 'dd/MM/yyyy');
+    return newTodayDate;
+}
+
+const getTodayDateTime = () => {
+    let newTodayDateTime = new Date(new Date().setHours(new Date().getHours() + 9));
+    return newTodayDateTime;
+}
+
 const getAddedTimeSeries = (historicalUpdates, historicalUpdatesDaily, timeSeriesFeatures, latestTotals) => {
     let newRecords = [];
     let uniqueDates = [...new Set(historicalUpdates.map(item => item.Date))];
+
+    //add new today date
+    let newTodayDate = getTodayDateString();
+    console.log('[getAddedTimeSeries] Today date: ' + newTodayDate);
+    if (uniqueDates.indexOf(newTodayDate) < 0) {
+        uniqueDates.push(newTodayDate);
+    }
     console.log(uniqueDates);
+
     for (const uniqueDate of uniqueDates) {
         let newRecord = {};
         if (uniqueDate) {
@@ -535,12 +564,12 @@ const getAddedTimeSeries = (historicalUpdates, historicalUpdatesDaily, timeSerie
             let filtered = historicalUpdatesDaily.filter(x => x.DateTimestamp === uniqueDateTimestamp);
 
             let todayRecord = null;
-            let todayDate  = getFormattedDate(new Date()) + ' 00:00 GMT';
-            let todayTimestamp = new Date(todayDate).setHours(new Date(todayDate).getHours() - settings.additionalHours);
+            let todayTimestamp = getTodayTimestamp();
+            console.log('[getAddedTimeSeries] uniqueDateTimestamp => ' + uniqueDateTimestamp);
+            console.log('[getAddedTimeSeries] todayTimestamp => ' + todayTimestamp);
             if (uniqueDateTimestamp === todayTimestamp) {
                 todayRecord = getTodayRecord(latestTotals, timeSeriesFeatures);
-                console.log('new record for today:' + todayTimestamp);
-                console.log('todayRecord -> ' + JSON.stringify(todayRecord));
+                console.log('[getAddedTimeSeries] todayRecord -> ' + JSON.stringify(todayRecord));
             }
 
             if (filtered && filtered.length > 0) {
@@ -622,21 +651,80 @@ const getUpdatedStates = (latestTotals, statesFeatures) => {
     return updatedStates;
 }
 
+const getCustomFormattedDate = (customizeThisDate, customFormat) => {
+    let day = customizeThisDate.getDate();
+    let month = customizeThisDate.getMonth() + 1;
+    var year = customizeThisDate.getFullYear();
+
+    day = (day < 10) ? '0' + day : day;
+    month = (month < 10) ? '0' + month : month;
+
+    let dateAfterCustomized = null;
+    let splitter = '/';
+    if (customFormat.indexOf('-') > -1) {
+        splitter = '-';
+    }
+
+    switch (customFormat) {
+        case `dd${splitter}MM${splitter}yyyy`:
+            dateAfterCustomized = `${day}${splitter}${month}${splitter}${year}`;
+            break;
+        case `MM${splitter}dd${splitter}yyyy`:
+            dateAfterCustomized = `${day}${splitter}${month}${splitter}${year}`;
+            break;
+        default:
+            dateAfterCustomized = customizeThisDate;
+            break;
+    }
+
+    return dateAfterCustomized;
+}
+
 const appRouterTEST = app => {
     app.get('/', async (req, res) => {
         console.log("Testing started.")
         try {
 
-            // console.log('new Date: ' + new Date());
-            // console.log('today timestamp: ' + new Date().getTime());
-            // console.log('today timestamp with 00:00 GMT: ' + new Date(getFormattedDate(new Date()) + ' 00:00 GMT').getTime());
-            let todayDate = getFormattedDate(new Date());
-            //let todayTimestamp = new Date(todayDate + ' 00:00 GMT').setHours(new Date(todayDate + ' 00:00 GMT').getHours() - 8);
-            let todayTimestamp  = new Date(todayDate + ' 00:00').getTime();
-            console.log(new Date(todayDate + ' 00:00'));
-            console.log(todayTimestamp);
+            // console.log('[Date] Current date time: ' + new Date());
+            // console.log('[Timestamp] Current datetime timestamp: ' + new Date().getTime());
+            // console.log('[String] Current datetime timestamp (yyyy-MM-dd): ' + getFormattedDate(new Date()));
+            // console.log('[Date] today timestamp with 00:00 GMT: ' + new Date(getFormattedDate(new Date()) + ' 00:00 GMT').getTime());
 
-        
+            // let yesterday  = new Date(new Date().setDate(new Date().getDate() - 1));
+            // console.log('[Date] Yesterday 00:00 GMT: ' + new Date(getFormattedDate(yesterday) + ' 00:00 GMT'));
+            // console.log('[Date] Yesterday 00:00: ' + new Date(getFormattedDate(yesterday) + ' 00:00'));
+
+            //get 'updates' from JSON source
+            //get JSON source
+
+            const source = await getSource();
+            const historicalUpdates = source.sheets["updates"];
+            let uniqueDates = [...new Set(historicalUpdates.map(item => item.Date))];
+            console.log(uniqueDates);   
+
+            let todayDate2 =  new Date(new Date().setHours(new Date().getHours() + 8))
+
+            let todayDate = getCustomFormattedDate(new Date(), 'dd/MM/yyyy');
+            let tomorrowDate = getCustomFormattedDate(new Date(new Date().setDate(new Date().getDate() + 1)), 'dd/MM/yyyy');
+            
+            console.log('todayDate:' + todayDate);
+            console.log('todayDate (+ 8 hours):' + todayDate2);
+            console.log('todayDate formatted(+ 8 hours):' + getCustomFormattedDate(todayDate2, 'dd/MM/yyyy'));
+            
+            console.log('tomorrowDate:' + tomorrowDate);
+
+            if (uniqueDates.indexOf(todayDate) > -1) {
+                console.log(`${todayDate} already exist`);
+            }
+
+            if (uniqueDates.indexOf(tomorrowDate) > -1) {
+                console.log(`${tomorrowDate} already exist`);
+            } else {
+                uniqueDates.push(tomorrowDate);
+            }
+            console.log(uniqueDates);            
+
+            res.status(200).send('Test completed.');
 
         } catch (error) {
             console.log(error);
@@ -654,7 +742,7 @@ const appRouter = app => {
             const token = await requestToken();
             console.log('token: ' + token);
 
-            //**** TO DELETE UNEXPECTED RESULT */
+            //**** TO DELETE UNEXPECTED RESULT */cd 
 
             //temp call to delete duplicate records
             const removeResult = await deleteFeatureByObjectId(token, timeSeriesFeatureApiApplyEdit);
