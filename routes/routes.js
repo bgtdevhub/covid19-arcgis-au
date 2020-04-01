@@ -449,7 +449,7 @@ const getUpdatedTimeSeries = (timeSeriesFeatures, historicalUpdatesDaily, latest
         let currentUpdatesRecord = {};
         let updatedRecord = {};
         let todayRecord = null;
-        let todayTimestamp = getTodayTimestamp(); 
+        let todayTimestamp = getTodayTimestamp();
 
         //filter by timestamp
         let filtered = historicalUpdatesDaily.filter(x => x.DateTimestamp === feature.attributes.Date);
@@ -526,7 +526,7 @@ const getYesterdayTimestamp = () => {
 const getTodayTimestamp = () => {
     let newTodayDate = getTodayDateString();
     let todayDate = getFormattedDate(getDayMonthYear(newTodayDate)) + ' 00:00 GMT';//getFormattedDate(new Date()) + ' 00:00 GMT';
-    let todayTimestamp = new Date(todayDate).setHours(new Date(todayDate).getHours() - settings.additionalHours);
+    let todayTimestamp = new Date(todayDate).setHours(new Date(todayDate).getHours());
     return todayTimestamp;
 }
 
@@ -537,7 +537,7 @@ const getTodayDateString = () => {
 }
 
 const getTodayDateTime = () => {
-    let newTodayDateTime = new Date(new Date().setHours(new Date().getHours() + 9));
+    let newTodayDateTime = new Date(new Date().setHours(new Date().getHours() + settings.UTCdifferentHours));
     return newTodayDateTime;
 }
 
@@ -558,7 +558,7 @@ const getAddedTimeSeries = (historicalUpdates, historicalUpdatesDaily, timeSerie
         if (uniqueDate) {
 
             let newUniqueDate = getFormattedDate(getDayMonthYear(uniqueDate)) + ' 00:00 GMT';
-            let uniqueDateTimestamp = new Date(newUniqueDate).setHours(new Date(newUniqueDate).getHours() - settings.additionalHours);
+            let uniqueDateTimestamp = new Date(newUniqueDate).setHours(new Date(newUniqueDate).getHours());
 
             if (IsAlreadyAdded(uniqueDateTimestamp, timeSeriesFeatures)) continue;
             let filtered = historicalUpdatesDaily.filter(x => x.DateTimestamp === uniqueDateTimestamp);
@@ -682,49 +682,135 @@ const getCustomFormattedDate = (customizeThisDate, customFormat) => {
 
 const appRouterTEST = app => {
     app.get('/', async (req, res) => {
-        console.log("Testing started.")
+        console.log("Scanning started...")
         try {
 
-            // console.log('[Date] Current date time: ' + new Date());
-            // console.log('[Timestamp] Current datetime timestamp: ' + new Date().getTime());
-            // console.log('[String] Current datetime timestamp (yyyy-MM-dd): ' + getFormattedDate(new Date()));
-            // console.log('[Date] today timestamp with 00:00 GMT: ' + new Date(getFormattedDate(new Date()) + ' 00:00 GMT').getTime());
+            _states = [];
 
-            // let yesterday  = new Date(new Date().setDate(new Date().getDate() - 1));
-            // console.log('[Date] Yesterday 00:00 GMT: ' + new Date(getFormattedDate(yesterday) + ' 00:00 GMT'));
-            // console.log('[Date] Yesterday 00:00: ' + new Date(getFormattedDate(yesterday) + ' 00:00'));
+            settings.UTCdifferentHours = 0;
+
+            //get token
+            const token = await requestToken();
+            console.log('token: ' + token);
+
+            //**** TO DELETE UNEXPECTED RESULT */cd 
+
+            //temp call to delete duplicate records
+            const removeResult = await deleteFeatureByObjectId(token, timeSeriesFeatureApiApplyEdit);
+
+            //get JSON source
+            const source = await getSource();
+
+            //get states features
+            const statesFeatures = await getStatesFeatures(token);
+
+            //get time series features
+            const timeSeriesFeatures = await getTimeSeriesFeatures(token);
+
+            //get 'latest totals' from JSON source
+            const latestTotals = source.sheets["latest totals"];
 
             //get 'updates' from JSON source
-            //get JSON source
-
-            const source = await getSource();
             const historicalUpdates = source.sheets["updates"];
-            let uniqueDates = [...new Set(historicalUpdates.map(item => item.Date))];
-            console.log(uniqueDates);   
 
-            let todayDate2 =  new Date(new Date().setHours(new Date().getHours() + 8))
+            //transform 'updates' to limit one record per day
+            const historicalUpdatesDaily = getDailyHistoricalUpdates(historicalUpdates);
 
-            let todayDate = getCustomFormattedDate(new Date(), 'dd/MM/yyyy');
-            let tomorrowDate = getCustomFormattedDate(new Date(new Date().setDate(new Date().getDate() + 1)), 'dd/MM/yyyy');
-            
-            console.log('todayDate:' + todayDate);
-            console.log('todayDate (+ 8 hours):' + todayDate2);
-            console.log('todayDate formatted(+ 8 hours):' + getCustomFormattedDate(todayDate2, 'dd/MM/yyyy'));
-            
-            console.log('tomorrowDate:' + tomorrowDate);
-
-            if (uniqueDates.indexOf(todayDate) > -1) {
-                console.log(`${todayDate} already exist`);
+            //get states from states feature
+            for (let feature of statesFeatures.features) {
+                if (feature.attributes.ISO_SUB != 'OT') {
+                    _states.push(feature.attributes.ISO_SUB);
+                }
             }
 
-            if (uniqueDates.indexOf(tomorrowDate) > -1) {
-                console.log(`${tomorrowDate} already exist`);
+            let stateTotal = latestTotals.find(latest => latest[_jsonFields_LatestTotals.State] === 'National');
+            let confirmedCases, death, testsConducted = null;
+            if (stateTotal) {
+                deaths = (stateTotal[_jsonFields_LatestTotals.Deaths]) ? stateTotal[_jsonFields_LatestTotals.Deaths] : 0;
+                confirmedCases = (stateTotal[_jsonFields_LatestTotals.Cases]) ? stateTotal[_jsonFields_LatestTotals.Cases] : null;
+                testsConducted = (stateTotal[_jsonFields_LatestTotals.Tests]) ? stateTotal[_jsonFields_LatestTotals.Tests] : null;
+            }
+
+
+            let todayRecord = timeSeriesFeatures.features.find(x => x.attributes.Date == getTodayTimestamp())
+            console.log('todayRecord:' + JSON.stringify(todayRecord));
+            let todayCases, todayDeaths, todayTests = null;
+            if (todayRecord) {
+                todayCases = todayRecord.attributes.Total_Cases;
+                todayDeaths = todayRecord.attributes.Total_Deaths;
+                todayTests = todayRecord.attributes.Total_Tests;
+            }
+
+            let casesLine, deathsLine, testLine = '';
+            let notMacthes = [];
+            if (getFormattedNumber(confirmedCases) === todayCases) {
+                casesLine = '<font color = green>Cases: [Source] ' + confirmedCases + ' vs [Target] ' + todayCases + '</font>';
+                console.log(casesLine);
+            }
+            else {
+                casesLine = '<font color = red>Cases: [Source] ' + confirmedCases + ' vs [Target] ' + todayCases + '</font>';
+                console.log(casesLine);
+                notMacthes.push('Total Cases');
+            }
+
+            if (getFormattedNumber(deaths) === todayDeaths) {
+                deathsLine = '<font color = green>Deaths: [Source] ' + deaths + ' vs [Target] ' + todayDeaths + '</font>';
+                console.log(deathsLine);
+            }
+            else {
+                deathsLine = '<font color = read>Deaths: [Source] ' + deaths + ' vs [Target] ' + todayDeaths + '</font>';
+                console.log(deathsLine);
+                notMacthes.push('Total Deaths');
+            }
+
+            if (getFormattedNumber(testsConducted) === todayTests) {
+                testsLine = '<font color = green>Tests: [Source] ' + testsConducted + ' vs [Target] ' + todayTests + '</font>';
+                console.log(testsLine);
+            }
+            else {
+                testsLine = '<font color = red>Tests: [Source] ' + testsConducted + ' vs [Target] ' + todayTests + '</font>';
+                console.log(testsLine);
+                notMacthes.push('Total Tests');
+            }
+
+            let notMatchText = '';
+            for (const notMatch of notMacthes) {
+                notMatchText += notMatch + ',';
+            }
+
+            if (notMacthes.length == 0) {
+                notMatchText = '<font color = green><strong>Errmmm....so far looks good!</strong></font>';
             } else {
-                uniqueDates.push(tomorrowDate);
+                notMatchText += ' currently not matched!';
             }
-            console.log(uniqueDates);            
 
-            res.status(200).send('Test completed.');
+            let detailText = '';
+            for (const state of _states) {
+                let stateTotal = latestTotals.find(latest => latest[_jsonFields_LatestTotals.State] === state);
+                detailText += '<br/><br/>LATEST STAT FOR -> <strong>' + state + '</strong> ...';
+                for (const field of _layerFields) {
+                    if (field === 'Tests_Negative') continue;
+                    let fieldName = (field === 'Cases') ? state : state + '_' + field;
+                    
+                    let sourceValue = (stateTotal[_jsonFields_LatestTotals[field]]) ? getFormattedNumber(stateTotal[_jsonFields_LatestTotals[field]]) : 0;
+                    let targetValue =  (todayRecord.attributes[fieldName]) ? todayRecord.attributes[fieldName] : 0;
+                    if (sourceValue === targetValue) {
+                        detailText += '<br/><font color=green>' + fieldName + ': Source: ' + sourceValue + ' | Target: ' + targetValue;
+                        detailText += '</font>';
+                    }else{
+                        detailText += '<br/><font color=red>' + fieldName + ': Source: ' + sourceValue + ' | Target: ' + targetValue;
+                        detailText += '</font>';
+                    }
+                }
+            }
+
+            let totalRecords = '<strong>No of records: ' + timeSeriesFeatures.features.length + '</strong>';
+            let summaryText = "<br/><strong><u>SUMMARY TOTAL</u></strong></br>";
+            summaryText += '<strong><br/>' + totalRecords + '<br/>' + casesLine + '<br/>' + deathsLine + '<br/>' + testsLine + '</strong><br/><br/>' + notMatchText;
+
+            res.status(200).send(`<html><h2>COVID19 VERIFICATION PAGE</h2><body style='font-family: sans-serif;'><head>
+            <strong>(LAST SCANNED: ${new Date()})</strong><br/><br/> ${summaryText}${detailText}</body></html>`);
+
 
         } catch (error) {
             console.log(error);
